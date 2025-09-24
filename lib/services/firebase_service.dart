@@ -1,0 +1,629 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:io';
+
+// Import CloudinaryService
+import 'cloudinary_service.dart';
+
+// Import our data models
+import '../models/transaction.dart' as model;
+import '../models/budget.dart';
+import '../models/user_profile.dart';
+
+class FirebaseService {
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
+  final _secureStorage = const FlutterSecureStorage();
+  final CloudinaryService _cloudinaryService = CloudinaryService();
+
+  FirebaseService()
+    : _auth = FirebaseAuth.instance,
+      _firestore = FirebaseFirestore.instance;
+
+  FirebaseAuth get auth => _auth;
+  FirebaseFirestore get firestore => _firestore;
+
+  // Authentication methods
+  Future<void> signUp({required String email, required String password}) async {
+    await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    // Get and store Firebase ID token
+    await _storeFirebaseToken();
+  }
+
+  Future<void> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    await _auth.signInWithEmailAndPassword(email: email, password: password);
+
+    // Get and store Firebase ID token
+    await _storeFirebaseToken();
+  }
+
+  // Store Firebase ID token securely
+  Future<void> _storeFirebaseToken() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        final token = await user.getIdToken(true);
+
+        await _secureStorage.write(key: 'auth_token', value: token);
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to store Firebase token: $e');
+    }
+  }
+
+  // Refresh Firebase token
+  Future<void> refreshToken() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        final token = await user.getIdToken(true); // Force refresh
+        await _secureStorage.write(key: 'auth_token', value: token);
+        debugPrint('🔄 Firebase token refreshed');
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to refresh Firebase token: $e');
+    }
+  }
+
+  // Get current Firebase token
+  Future<String?> getCurrentToken() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        return await user.getIdToken();
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to get Firebase token: $e');
+    }
+    return null;
+  }
+
+  // Password reset method
+  Future<void> resetPassword({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      debugPrint('📧 Password reset email sent to: $email');
+    } catch (e) {
+      debugPrint('❌ Failed to send password reset email: $e');
+      rethrow;
+    }
+  }
+
+  // Sign out and clear tokens
+  Future<void> signOut() async {
+    try {
+      await _auth.signOut();
+      await _secureStorage.delete(key: 'auth_token');
+      debugPrint('🔓 User signed out, tokens cleared');
+    } catch (e) {
+      debugPrint('❌ Failed to sign out: $e');
+    }
+  }
+
+  // Method to get a real-time stream of transactions for the current user
+  Stream<List<model.Transaction>> getTransactions() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return const Stream.empty();
+    }
+
+    // Reference to the user's transactions collection
+    final transactionsCollection = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('transactions')
+        .orderBy('date', descending: true); // Order by date descending
+
+    // Stream a list of Transaction objects
+    return transactionsCollection.snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => model.Transaction.fromFirestore(doc))
+          .toList();
+    });
+  }
+
+  // Method to add a new transaction
+  Future<void> addTransaction(model.Transaction transaction) async {
+    final user = _auth.currentUser;
+    debugPrint('User: $user');
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('transactions')
+        .add(transaction.toFirestore());
+  }
+
+  // Method to delete a transaction
+  Future<void> deleteTransaction(String transactionId) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('transactions')
+        .doc(transactionId)
+        .delete();
+  }
+
+  // Method to update a transaction
+  Future<void> updateTransaction(
+    String transactionId,
+    model.Transaction transaction,
+  ) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('transactions')
+        .doc(transactionId)
+        .update(transaction.toFirestore());
+  }
+
+  // Helper method to add a test transaction (for demonstration)
+  Future<void> addTestTransaction() async {
+    final testTransaction = model.Transaction(
+      id: '', // Will be auto-generated by Firestore
+      title: 'Test Transaction',
+      amount: 25.50,
+      date: DateTime.now(),
+      category: 'Food',
+      isExpense: true,
+    );
+    await addTransaction(testTransaction);
+  }
+
+  // Budget Management Methods
+
+  // Get budget for a specific month and year
+  Future<Budget?> getBudget(int year, int month) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('budgets')
+          .doc('${year}_$month')
+          .get();
+
+      if (doc.exists) {
+        return Budget.fromMap(doc.data()!);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting budget: $e');
+      rethrow;
+    }
+  }
+
+  // Set budget for a specific month and year
+  Future<void> setBudget(double amount, int year, int month) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      final now = DateTime.now();
+      final budget = Budget(
+        id: '${year}_$month',
+        amount: amount,
+        year: year,
+        month: month,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('budgets')
+          .doc('${year}_$month')
+          .set(budget.toMap());
+
+      debugPrint('Budget set successfully');
+    } catch (e) {
+      debugPrint('Error setting budget: $e');
+      rethrow;
+    }
+  }
+
+  // Get current month's budget
+  Future<Budget?> getCurrentBudget() async {
+    final now = DateTime.now();
+    return await getBudget(now.year, now.month);
+  }
+
+  // Set current month's budget
+  Future<void> setCurrentBudget(double amount) async {
+    final now = DateTime.now();
+    return await setBudget(amount, now.year, now.month);
+  }
+
+  // Get stream of current month's budget
+  Stream<Budget?> getCurrentBudgetStream() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final now = DateTime.now();
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('budgets')
+        .doc('${now.year}_${now.month}')
+        .snapshots()
+        .map((doc) {
+          if (doc.exists) {
+            return Budget.fromMap(doc.data()!);
+          }
+          return null;
+        });
+  }
+
+  // Get stream of all budgets for history
+  Stream<List<Budget>> getBudgetHistoryStream() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return const Stream.empty();
+    }
+
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('budgets')
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => Budget.fromMap(doc.data()))
+              .toList();
+        });
+  }
+
+  // Calculate total expenses for current month
+  Future<double> getCurrentMonthExpenses() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('transactions')
+          .where(
+            'date',
+            isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch,
+          )
+          .where('date', isLessThanOrEqualTo: endOfMonth.millisecondsSinceEpoch)
+          .where('isExpense', isEqualTo: true)
+          .get();
+
+      double totalExpenses = 0.0;
+      for (var doc in querySnapshot.docs) {
+        totalExpenses += (doc.data()['amount'] ?? 0.0).toDouble();
+      }
+
+      return totalExpenses;
+    } catch (e) {
+      debugPrint('Error getting current month expenses: $e');
+      rethrow;
+    }
+  }
+
+  // Get stream of current month expenses
+  Stream<double> getCurrentMonthExpensesStream() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('transactions')
+        .where(
+          'date',
+          isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch,
+        )
+        .where('date', isLessThanOrEqualTo: endOfMonth.millisecondsSinceEpoch)
+        .where('isExpense', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+          double totalExpenses = 0.0;
+          for (var doc in snapshot.docs) {
+            totalExpenses += (doc.data()['amount'] ?? 0.0).toDouble();
+          }
+          return totalExpenses;
+        });
+  }
+
+  // Get previous month's expenses
+  Future<double> getPreviousMonthExpenses() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    try {
+      final now = DateTime.now();
+      final previousMonth = now.month == 1 ? 12 : now.month - 1;
+      final previousYear = now.month == 1 ? now.year - 1 : now.year;
+
+      final startOfPreviousMonth = DateTime(previousYear, previousMonth, 1);
+      final endOfPreviousMonth = DateTime(
+        previousYear,
+        previousMonth + 1,
+        0,
+        23,
+        59,
+        59,
+      );
+
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('transactions')
+          .where(
+            'date',
+            isGreaterThanOrEqualTo: startOfPreviousMonth.millisecondsSinceEpoch,
+          )
+          .where(
+            'date',
+            isLessThanOrEqualTo: endOfPreviousMonth.millisecondsSinceEpoch,
+          )
+          .where('isExpense', isEqualTo: true)
+          .get();
+
+      double totalExpenses = 0.0;
+      for (var doc in querySnapshot.docs) {
+        totalExpenses += (doc.data()['amount'] ?? 0.0).toDouble();
+      }
+
+      return totalExpenses;
+    } catch (e) {
+      debugPrint('Error getting previous month expenses: $e');
+      rethrow;
+    }
+  }
+
+  // Get stream combining current and previous month expenses for comparison
+  Stream<Map<String, double>> getMonthlyComparisonStream() async* {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final now = DateTime.now();
+
+    // Current month
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+
+    // Previous month
+    final previousMonth = now.month == 1 ? 12 : now.month - 1;
+    final previousYear = now.month == 1 ? now.year - 1 : now.year;
+    final startOfPreviousMonth = DateTime(previousYear, previousMonth, 1);
+    final endOfPreviousMonth = DateTime(
+      previousYear,
+      previousMonth + 1,
+      0,
+      23,
+      59,
+      59,
+    );
+
+    // Get current month expenses
+    final currentMonthStream = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('transactions')
+        .where(
+          'date',
+          isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch,
+        )
+        .where('date', isLessThanOrEqualTo: endOfMonth.millisecondsSinceEpoch)
+        .where('isExpense', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+          double totalExpenses = 0.0;
+          for (var doc in snapshot.docs) {
+            totalExpenses += (doc.data()['amount'] ?? 0.0).toDouble();
+          }
+          return totalExpenses;
+        });
+
+    // Get previous month expenses
+    final previousMonthStream = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('transactions')
+        .where(
+          'date',
+          isGreaterThanOrEqualTo: startOfPreviousMonth.millisecondsSinceEpoch,
+        )
+        .where(
+          'date',
+          isLessThanOrEqualTo: endOfPreviousMonth.millisecondsSinceEpoch,
+        )
+        .where('isExpense', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+          double totalExpenses = 0.0;
+          for (var doc in snapshot.docs) {
+            totalExpenses += (doc.data()['amount'] ?? 0.0).toDouble();
+          }
+          return totalExpenses;
+        });
+
+    // Combine both streams using async generator
+    await for (final currentMonth in currentMonthStream) {
+      await for (final previousMonth in previousMonthStream.take(1)) {
+        yield {'current': currentMonth, 'previous': previousMonth};
+      }
+    }
+  }
+
+  // Profile Management Methods
+
+  /// Get the current user's profile stream
+  Stream<UserProfile?> getProfileStream() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value(null);
+    }
+
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('profile')
+        .doc('info')
+        .snapshots()
+        .map((snapshot) {
+          if (snapshot.exists) {
+            return UserProfile.fromFirestore(snapshot);
+          }
+          return null;
+        });
+  }
+
+  /// Add or update user profile
+  Future<void> addOrUpdateProfile(UserProfile profile) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('profile')
+          .doc('info')
+          .set(profile.toFirestore(), SetOptions(merge: true));
+
+      debugPrint('✅ Profile saved successfully');
+    } catch (e) {
+      debugPrint('❌ Failed to save profile: $e');
+      rethrow;
+    }
+  }
+
+  /// Upload profile image to Cloudinary
+  Future<String?> uploadProfileImage(File imageFile) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      // Check if file exists and is readable
+      if (!await imageFile.exists()) {
+        throw Exception('Image file does not exist');
+      }
+
+      // Check if Cloudinary is configured
+      if (!CloudinaryService.isConfigured()) {
+        throw Exception(
+          'Cloudinary not configured. Please set up your Cloudinary credentials.',
+        );
+      }
+
+      debugPrint('📤 Uploading profile image to Cloudinary...');
+
+      // Upload to Cloudinary with user-specific folder
+      final imageUrl = await _cloudinaryService.uploadImage(
+        imageFile,
+        folder: 'profile_images/${user.uid}',
+      );
+
+      debugPrint(
+        '✅ Profile image uploaded successfully to Cloudinary: $imageUrl',
+      );
+      return imageUrl;
+    } catch (e) {
+      debugPrint('❌ Failed to upload profile image to Cloudinary: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete profile image from Cloudinary
+  Future<void> deleteProfileImage(String imageUrl) async {
+    try {
+      if (imageUrl.isEmpty) {
+        debugPrint('⚠️ No image URL provided for deletion');
+        return;
+      }
+
+      debugPrint('🗑️ Deleting profile image: $imageUrl');
+
+      // Check if it's a Cloudinary URL
+      if (imageUrl.contains('cloudinary.com')) {
+        await _cloudinaryService.deleteImage(imageUrl);
+        debugPrint('✅ Profile image deleted from Cloudinary');
+      } else {
+        debugPrint('⚠️ Non-Cloudinary URL detected - deletion not supported');
+        debugPrint('🔍 URL: $imageUrl');
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to delete profile image: $e');
+      // Don't rethrow for deletion failures - it's not critical
+      debugPrint('⚠️ Continuing without deleting the image file');
+    }
+  }
+
+  /// Create a default profile for new users
+  Future<UserProfile> createDefaultProfile(
+    String userId,
+    String email,
+    String name,
+  ) async {
+    final now = DateTime.now();
+    final defaultProfile = UserProfile(
+      id: userId,
+      name: name,
+      email: email,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('profile')
+        .doc('info')
+        .set(defaultProfile.toFirestore());
+
+    debugPrint('✅ Default profile created for user: $userId');
+    return defaultProfile;
+  }
+}
