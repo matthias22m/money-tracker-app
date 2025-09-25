@@ -1,0 +1,39 @@
+name: Android APK Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*" # Triggers on tags like v1.0.0, v1.2.3
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.x.x" # Your Flutter version
+          channel: "stable"
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: App Release ${{ github.ref_name }}
+          body: |
+            A new release of the app is available.
+
+            This release includes:
+            - **Bug fixes** 🐛
+            - **New features** ✨
+          files: build/app/outputs/flutter-apk/*.apk
