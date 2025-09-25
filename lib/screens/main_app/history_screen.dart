@@ -329,42 +329,45 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.only(right: 4),
-                          child: ListTile(
-                            tileColor: Theme.of(context).cardTheme.color,
+                          child: Material(
+                            color: Theme.of(context).cardTheme.color,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            leading: CircleAvatar(
-                              backgroundColor: color.withOpacity(0.1),
-                              child: Icon(icon, color: color),
-                            ),
-                            title: Text(
-                              transaction.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                            clipBehavior: Clip.antiAlias,
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: color.withOpacity(0.1),
+                                child: Icon(icon, color: color),
                               ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(transaction.category),
-                                Text(
-                                  DateFormat.yMMMd().format(transaction.date),
-                                  style: TextStyle(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.6),
-                                    fontSize: 12,
-                                  ),
+                              title: Text(
+                                transaction.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              ],
-                            ),
-                            trailing: Text(
-                              '${transaction.isExpense ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color: color,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(transaction.category),
+                                  Text(
+                                    DateFormat.yMMMd().format(transaction.date),
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface.withOpacity(0.6),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: Text(
+                                '${transaction.isExpense ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: color,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
                           ),

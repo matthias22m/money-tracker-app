@@ -51,38 +51,9 @@ class NotificationService {
       // Request permissions for Android 13+
       await _requestPermissions();
 
-      // Test immediate notification to verify system works
-      await _testImmediateNotification();
+      // Initialization complete
     } catch (e) {
       debugPrint('❌ Failed to initialize notification service: $e');
-    }
-  }
-
-  /// Test immediate notification to verify system works
-  static Future<void> _testImmediateNotification() async {
-    try {
-      await _notifications.show(
-        888, // Test ID
-        'Notification System Test',
-        'If you see this, notifications are working!',
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'test_channel',
-            'Test Notifications',
-            channelDescription: 'Test notification channel',
-            importance: Importance.max,
-            priority: Priority.high,
-          ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-      );
-      debugPrint('🧪 Test notification sent during initialization');
-    } catch (e) {
-      debugPrint('❌ Failed to send test notification: $e');
     }
   }
 
@@ -255,7 +226,7 @@ class NotificationService {
         notificationDetails,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        // Temporarily remove matchDateTimeComponents to test
+        matchDateTimeComponents: DateTimeComponents.time,
         payload: 'add_expense', // Navigation payload
       );
 
@@ -350,189 +321,5 @@ class NotificationService {
     return await _notifications.pendingNotificationRequests();
   }
 
-  /// Schedule a test notification for 2 minutes from now
-  static Future<bool> scheduleTestNotification() async {
-    try {
-      final now = DateTime.now();
-      final testTime = now.add(const Duration(minutes: 2));
-      final scheduledTime = tz.TZDateTime.from(testTime, tz.local);
-
-      debugPrint('🧪 Scheduling test notification for 2 minutes from now');
-      debugPrint('📅 Test time: $scheduledTime');
-
-      const androidDetails = AndroidNotificationDetails(
-        'test_channel',
-        'Test Notifications',
-        channelDescription: 'Test notification channel',
-        importance: Importance.max,
-        priority: Priority.high,
-        icon: '@mipmap/launcher_icon',
-        playSound: true,
-        enableVibration: true,
-        autoCancel: true,
-      );
-
-      const iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
-
-      const notificationDetails = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      await _notifications.zonedSchedule(
-        777, // Test notification ID
-        'Test Reminder 🧪',
-        'This is a test notification scheduled for 2 minutes from now!',
-        scheduledTime,
-        notificationDetails,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        payload: 'test_reminder',
-      );
-
-      debugPrint('✅ Test notification scheduled successfully!');
-      return true;
-    } catch (e) {
-      debugPrint('❌ Failed to schedule test notification: $e');
-      return false;
-    }
-  }
-
-  /// Schedule a test notification using the same logic as daily reminders
-  static Future<bool> scheduleTimeBasedTest() async {
-    try {
-      print('🧪 Starting time-based test...');
-      debugPrint('🧪 Starting time-based test...');
-
-      final now = DateTime.now();
-      // Schedule for 3 minutes from now using the same time calculation logic
-      final testHour = now.hour;
-      final testMinute = now.minute + 3;
-
-      // Handle minute overflow
-      final adjustedMinute = testMinute >= 60 ? testMinute - 60 : testMinute;
-      final adjustedHour = testMinute >= 60 ? (testHour + 1) % 24 : testHour;
-
-      print(
-        '🧪 Testing time-based scheduling for ${adjustedHour.toString().padLeft(2, '0')}:${adjustedMinute.toString().padLeft(2, '0')}',
-      );
-      debugPrint(
-        '🧪 Testing time-based scheduling for ${adjustedHour.toString().padLeft(2, '0')}:${adjustedMinute.toString().padLeft(2, '0')}',
-      );
-
-      // Use the same scheduling logic as daily reminders
-      print('⏰ Calculating scheduled time...');
-      debugPrint('⏰ Calculating scheduled time...');
-      final scheduledTime = _nextInstanceOfTime(adjustedHour, adjustedMinute);
-      print('📅 Scheduled time calculated: $scheduledTime');
-      debugPrint('📅 Scheduled time calculated: $scheduledTime');
-
-      const androidDetails = AndroidNotificationDetails(
-        'test_channel',
-        'Test Notifications',
-        channelDescription: 'Test notification channel',
-        importance: Importance.max,
-        priority: Priority.high,
-        icon: '@mipmap/launcher_icon',
-        playSound: true,
-        enableVibration: true,
-        autoCancel: true,
-      );
-
-      const iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
-
-      const notificationDetails = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      print('📱 Scheduling notification...');
-      debugPrint('📱 Scheduling notification...');
-
-      await _notifications.zonedSchedule(
-        666, // Different test notification ID
-        'Time-Based Test ⏰',
-        'This tests the same logic as daily reminders!',
-        scheduledTime,
-        notificationDetails,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        // Remove matchDateTimeComponents to test if this is the issue
-        payload: 'time_based_test',
-      );
-
-      print('✅ Time-based test notification scheduled successfully!');
-      debugPrint('✅ Time-based test notification scheduled successfully!');
-
-      // Verify it was scheduled
-      final pending = await _notifications.pendingNotificationRequests();
-      print('📋 Pending notifications after scheduling: ${pending.length}');
-      debugPrint(
-        '📋 Pending notifications after scheduling: ${pending.length}',
-      );
-
-      return true;
-    } catch (e) {
-      print('❌ Failed to schedule time-based test notification: $e');
-      debugPrint('❌ Failed to schedule time-based test notification: $e');
-      return false;
-    }
-  }
-
-  /// Test notification (for debugging)
-  static Future<void> showTestNotification() async {
-    const androidDetails = AndroidNotificationDetails(
-      'test_channel',
-      'Test Notifications',
-      channelDescription: 'Test notification channel',
-      importance: Importance.max,
-      priority: Priority.high,
-      icon: '@mipmap/launcher_icon',
-      largeIcon: DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
-      color: Color(0xFF4A55A2),
-      playSound: true,
-      enableVibration: true,
-      autoCancel: true,
-      fullScreenIntent: true,
-      category: AndroidNotificationCategory.alarm,
-      visibility: NotificationVisibility.public,
-      ticker: 'Test notification!',
-      styleInformation: BigTextStyleInformation(
-        'This is a test notification to verify the system is working correctly!',
-        contentTitle: 'Test Notification 🧪',
-        summaryText: 'Notification System Test',
-      ),
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-      interruptionLevel: InterruptionLevel.active,
-      sound: 'default',
-    );
-
-    const notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _notifications.show(
-      999,
-      'Test Notification 🧪',
-      'This is a test notification from Penni!',
-      notificationDetails,
-      payload: 'test_notification',
-    );
-
-    debugPrint('🧪 Test notification sent');
-  }
+  // Removed test scheduling and debug-only helpers per request
 }

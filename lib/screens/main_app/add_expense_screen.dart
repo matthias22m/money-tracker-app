@@ -43,6 +43,91 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
+  Future<void> _showCategoryPicker() async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardTheme.color,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: false,
+      builder: (context) {
+        return SizedBox(
+          height: 320,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    Text(
+                      'Select Category',
+                      style: GoogleFonts.lato(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ScrollConfiguration(
+                  behavior: const _SmoothScrollBehavior(),
+                  child: ListView.separated(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: CategoryConfig.categories.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final category = CategoryConfig.categories[index];
+                      final selected = category == _selectedCategory;
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: CategoryConfig.getColor(
+                            category,
+                          ).withOpacity(0.12),
+                          child: Icon(
+                            CategoryConfig.getIcon(category),
+                            color: CategoryConfig.getColor(category),
+                          ),
+                        ),
+                        title: Text(
+                          category,
+                          style: GoogleFonts.lato(
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                        ),
+                        trailing: selected
+                            ? const Icon(Icons.check_rounded)
+                            : null,
+                        onTap: _isLoading
+                            ? null
+                            : () {
+                                setState(() => _selectedCategory = category);
+                                Navigator.of(context).pop();
+                              },
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _amountController.dispose();
@@ -483,59 +568,47 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             style: GoogleFonts.lato(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 15),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: CategoryConfig.categories.map((category) {
-              final isSelected = _selectedCategory == category;
-              return GestureDetector(
-                onTap: _isLoading
-                    ? null
-                    : () => setState(() => _selectedCategory = category),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
+          InkWell(
+            onTap: _isLoading ? null : _showCategoryPicker,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    CategoryConfig.getIcon(_selectedCategory),
+                    color: CategoryConfig.getColor(_selectedCategory),
+                    size: 20,
                   ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? CategoryConfig.getColor(category).withOpacity(0.1)
-                        : Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected
-                          ? CategoryConfig.getColor(category)
-                          : Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.3),
-                      width: 2,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _selectedCategory,
+                      style: GoogleFonts.lato(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        CategoryConfig.getIcon(category),
-                        color: CategoryConfig.getColor(category),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        category,
-                        style: GoogleFonts.lato(
-                          color: CategoryConfig.getColor(category),
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ],
+                  Icon(
+                    Icons.arrow_drop_down,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.6),
                   ),
-                ),
-              );
-            }).toList(),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -650,5 +723,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
       ),
     );
+  }
+}
+
+class _SmoothScrollBehavior extends ScrollBehavior {
+  const _SmoothScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const BouncingScrollPhysics();
   }
 }
