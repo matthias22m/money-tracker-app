@@ -8,7 +8,8 @@ on:
 jobs:
   build_and_release:
     runs-on: ubuntu-latest
-    
+    permissions:
+      content: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -16,8 +17,8 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x.x' # Your Flutter version
-          channel: 'stable'
+          channel: stable
+          flutter-version-file: pubspec.yaml
 
       - name: Install Dependencies
         run: flutter pub get
