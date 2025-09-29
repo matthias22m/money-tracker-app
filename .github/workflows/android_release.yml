@@ -26,14 +26,13 @@ jobs:
 
       - name: Decode release keystore
         run: |
-          echo "${{ secrets.PENNY_RELEASE_KEY_BASE64 }}" | base64 --decode > android/penny-release-key.jks
-      
+          echo "${{ secrets.PENNY_RELEASE_KEY_BASE64 }}" | base64 --decode > android/app/penny-release-key.jks
       - name: Generate key.properties
         run: |
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=android/penny-release-key.jks" >> android/key.properties
+          echo "storeFile=app/penny-release-key.jks" >> android/key.properties
 
       - name: Build Android APK
         run: flutter build apk --release
