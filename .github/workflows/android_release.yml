@@ -26,6 +26,8 @@ jobs:
 
       - name: Build Android APK
         run: flutter build apk --release
+        # If you want to build APKs for different architectures, uncomment the line below
+      - run: flutter build apk --release --split-per-abi
 
       - name: List files in APK output directory
         run: ls -R build/app/outputs/flutter-apk/
