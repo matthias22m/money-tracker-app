@@ -19,6 +19,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _searchQuery = '';
   String _selectedType = 'All'; // 'All', 'Income', 'Expense'
   String _selectedCategory = 'All'; // 'All', 'Food', 'Transport', etc.
+  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
   @override
   Widget build(BuildContext context) {
@@ -81,8 +82,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
           final allTransactions = snapshot.data ?? [];
 
+          // Month range filter (default: current month)
+          final startOfMonth = DateTime(
+            _selectedMonth.year,
+            _selectedMonth.month,
+            1,
+          );
+          final endOfMonth = DateTime(
+            _selectedMonth.year,
+            _selectedMonth.month + 1,
+            0,
+            23,
+            59,
+            59,
+          );
+          final monthFiltered = allTransactions.where((t) {
+            return t.date.isAfter(
+                  startOfMonth.subtract(const Duration(milliseconds: 1)),
+                ) &&
+                t.date.isBefore(
+                  endOfMonth.add(const Duration(milliseconds: 1)),
+                );
+          }).toList();
+
           // Apply filters
-          final filteredTransactions = allTransactions.where((transaction) {
+          final filteredTransactions = monthFiltered.where((transaction) {
             final matchesSearch = transaction.title.toLowerCase().contains(
               _searchQuery.toLowerCase(),
             );
@@ -101,6 +125,69 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
           return Column(
             children: [
+              // Month Selector
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardTheme.color,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: () {
+                        setState(() {
+                          final prevMonth = DateTime(
+                            _selectedMonth.year,
+                            _selectedMonth.month - 1,
+                            1,
+                          );
+                          _selectedMonth = DateTime(
+                            prevMonth.year,
+                            prevMonth.month,
+                          );
+                        });
+                      },
+                    ),
+                    Text(
+                      DateFormat.yMMMM().format(_selectedMonth),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: () {
+                        setState(() {
+                          final nextMonth = DateTime(
+                            _selectedMonth.year,
+                            _selectedMonth.month + 1,
+                            1,
+                          );
+                          _selectedMonth = DateTime(
+                            nextMonth.year,
+                            nextMonth.month,
+                          );
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
               // Filter Buttons
               Container(
                 margin: const EdgeInsets.all(16),

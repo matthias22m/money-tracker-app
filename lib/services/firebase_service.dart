@@ -12,11 +12,15 @@ import '../models/transaction.dart' as model;
 import '../models/budget.dart';
 import '../models/user_profile.dart';
 
+// Import UserService
+import 'user_service.dart';
+
 class FirebaseService {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
   final _secureStorage = const FlutterSecureStorage();
   final CloudinaryService _cloudinaryService = CloudinaryService();
+  final UserService _userService = UserService();
 
   FirebaseService()
     : _auth = FirebaseAuth.instance,
@@ -27,13 +31,42 @@ class FirebaseService {
 
   // Authentication methods
   Future<void> signUp({required String email, required String password}) async {
-    await _auth.createUserWithEmailAndPassword(
+    final cred = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
 
     // Get and store Firebase ID token
     await _storeFirebaseToken();
+
+    // Create default profile
+    final user = cred.user;
+    if (user != null) {
+      final inferredName = email.split('@').first;
+      await createDefaultProfile(user.uid, email, inferredName);
+
+      // Auto-generate and reserve username
+      try {
+        final suggested = await _userService.generateAvailableUsername(
+          base: inferredName,
+          reserve: true,
+          forUserId: user.uid,
+        );
+        if (suggested != null) {
+          await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('profile')
+              .doc('info')
+              .set({
+                'username': suggested,
+                'updatedAt': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+        }
+      } catch (e) {
+        debugPrint('⚠️ Failed to auto-assign username: $e');
+      }
+    }
   }
 
   Future<void> signInWithEmail({
@@ -322,9 +355,9 @@ class FirebaseService {
           .collection('transactions')
           .where(
             'date',
-            isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch,
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
           )
-          .where('date', isLessThanOrEqualTo: endOfMonth.millisecondsSinceEpoch)
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
           .where('isExpense', isEqualTo: true)
           .get();
 
@@ -355,11 +388,8 @@ class FirebaseService {
         .collection('users')
         .doc(user.uid)
         .collection('transactions')
-        .where(
-          'date',
-          isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch,
-        )
-        .where('date', isLessThanOrEqualTo: endOfMonth.millisecondsSinceEpoch)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
         .where('isExpense', isEqualTo: true)
         .snapshots()
         .map((snapshot) {
@@ -399,11 +429,11 @@ class FirebaseService {
           .collection('transactions')
           .where(
             'date',
-            isGreaterThanOrEqualTo: startOfPreviousMonth.millisecondsSinceEpoch,
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfPreviousMonth),
           )
           .where(
             'date',
-            isLessThanOrEqualTo: endOfPreviousMonth.millisecondsSinceEpoch,
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfPreviousMonth),
           )
           .where('isExpense', isEqualTo: true)
           .get();
@@ -451,11 +481,8 @@ class FirebaseService {
         .collection('users')
         .doc(user.uid)
         .collection('transactions')
-        .where(
-          'date',
-          isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch,
-        )
-        .where('date', isLessThanOrEqualTo: endOfMonth.millisecondsSinceEpoch)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
         .where('isExpense', isEqualTo: true)
         .snapshots()
         .map((snapshot) {
@@ -473,11 +500,11 @@ class FirebaseService {
         .collection('transactions')
         .where(
           'date',
-          isGreaterThanOrEqualTo: startOfPreviousMonth.millisecondsSinceEpoch,
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfPreviousMonth),
         )
         .where(
           'date',
-          isLessThanOrEqualTo: endOfPreviousMonth.millisecondsSinceEpoch,
+          isLessThanOrEqualTo: Timestamp.fromDate(endOfPreviousMonth),
         )
         .where('isExpense', isEqualTo: true)
         .snapshots()
@@ -625,5 +652,118 @@ class FirebaseService {
 
     debugPrint('✅ Default profile created for user: $userId');
     return defaultProfile;
+  }
+
+  // Username Management Methods
+
+  /// Check if a username is available
+  Future<bool> isUsernameAvailable(String username) async {
+    return await _userService.isUsernameAvailable(username);
+  }
+
+  /// Get user ID by username
+  Future<String?> getUserIdByUsername(String username) async {
+    return await _userService.getUserIdByUsername(username);
+  }
+
+  /// Set username for current user
+  Future<bool> setUsername(String username) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      // Check if username is available
+      if (!await _userService.isUsernameAvailable(username)) {
+        return false;
+      }
+
+      // Reserve the username
+      final success = await _userService.reserveUsername(username, user.uid);
+      if (!success) {
+        return false;
+      }
+
+      // Update user profile with username
+      final profileDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('profile')
+          .doc('info')
+          .get();
+
+      if (profileDoc.exists) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('profile')
+            .doc('info')
+            .update({
+              'username': username.toLowerCase().trim(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+      }
+
+      debugPrint('✅ Username set successfully: $username');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error setting username: $e');
+      return false;
+    }
+  }
+
+  /// Update username for current user
+  Future<bool> updateUsername(String newUsername) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      // Get current profile to find existing username
+      final profileDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('profile')
+          .doc('info')
+          .get();
+
+      if (!profileDoc.exists) {
+        throw Exception('User profile not found');
+      }
+
+      final currentData = profileDoc.data()!;
+      final currentUsername = currentData['username'] as String? ?? '';
+
+      // Update username using UserService
+      final success = await _userService.updateUsername(
+        currentUsername,
+        newUsername,
+        user.uid,
+      );
+
+      if (!success) {
+        return false;
+      }
+
+      // Update user profile with new username
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('profile')
+          .doc('info')
+          .update({
+            'username': newUsername.toLowerCase().trim(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+      debugPrint('✅ Username updated successfully: $newUsername');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error updating username: $e');
+      return false;
+    }
+  }
+
+  /// Get username validation error message
+  String? getUsernameValidationError(String username) {
+    return _userService.getUsernameValidationError(username);
   }
 }

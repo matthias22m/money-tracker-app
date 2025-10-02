@@ -33,18 +33,32 @@ class DashboardScreen extends StatelessWidget {
 
         final transactions = snapshot.data ?? [];
 
-        // Calculate totals
+        // Filter to current month
+        final now = DateTime.now();
+        final startOfMonth = DateTime(now.year, now.month, 1);
+        final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+        final currentMonthTx = transactions
+            .where(
+              (t) =>
+                  t.date.isAfter(
+                    startOfMonth.subtract(const Duration(milliseconds: 1)),
+                  ) &&
+                  t.date.isBefore(
+                    endOfMonth.add(const Duration(milliseconds: 1)),
+                  ),
+            )
+            .toList();
 
-        final totalExpenses = transactions
+        // Calculate totals for current month only
+        final totalExpenses = currentMonthTx
             .where((t) => t.isExpense)
             .fold(0.0, (sum, item) => sum + item.amount);
 
-        final recentTransactions = transactions.take(5).toList();
+        final recentTransactions = currentMonthTx.take(5).toList();
 
-        // Calculate spending by category
+        // Calculate spending by category for current month only
         final Map<String, double> categorySpending = {};
-
-        for (final transaction in transactions.where((t) => t.isExpense)) {
+        for (final transaction in currentMonthTx.where((t) => t.isExpense)) {
           final category = transaction.category;
           categorySpending[category] =
               (categorySpending[category] ?? 0) + transaction.amount;
