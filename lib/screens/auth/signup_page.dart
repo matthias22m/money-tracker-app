@@ -61,6 +61,9 @@ class _SignupPageState extends State<SignupPage> {
             backgroundColor: Colors.green,
           ),
         );
+
+        // Go to main app directly
+        Navigator.pushReplacementNamed(context, '/main');
       }
     } catch (e) {
       debugPrint('Signup failed: $e');

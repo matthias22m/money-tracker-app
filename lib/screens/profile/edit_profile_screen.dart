@@ -17,6 +17,7 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _bioController = TextEditingController();
 
@@ -34,6 +35,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _phoneController.dispose();
     _bioController.dispose();
     super.dispose();
@@ -49,6 +51,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         setState(() {
           _currentProfile = profile;
           _nameController.text = profile.name;
+          _usernameController.text = profile.username ?? '';
           _phoneController.text = profile.phoneNumber ?? '';
           _bioController.text = profile.bio ?? '';
         });
@@ -236,6 +239,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       }
 
+      // Handle username update if changed
+      final newUsername = _usernameController.text.trim();
+      final currentUsername = _currentProfile?.username ?? '';
+
+      if (newUsername.isNotEmpty && newUsername != currentUsername) {
+        final success = await firebaseService.updateUsername(newUsername);
+        if (!success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Failed to update username. It may already be taken.',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
       // Create updated profile
       final updatedProfile =
           (_currentProfile ??
@@ -248,6 +272,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ))
               .copyWith(
                 name: _nameController.text,
+                username: newUsername.isEmpty ? null : newUsername,
                 phoneNumber: _phoneController.text.isEmpty
                     ? null
                     : _phoneController.text,
@@ -440,6 +465,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
               return 'Please enter your name';
+            }
+            return null;
+          },
+        ),
+
+        const SizedBox(height: 16),
+
+        // Username Field
+        _buildTextField(
+          controller: _usernameController,
+          label: 'Username (Optional)',
+          icon: Icons.alternate_email,
+          validator: (value) {
+            if (value != null && value.trim().isNotEmpty) {
+              final firebaseService = Provider.of<FirebaseService>(
+                context,
+                listen: false,
+              );
+              return firebaseService.getUsernameValidationError(value.trim());
             }
             return null;
           },

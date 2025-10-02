@@ -4,6 +4,7 @@ class UserProfile {
   final String id;
   final String name;
   final String email;
+  final String? username;
   final String? profileImageUrl;
   final String? phoneNumber;
   final String? bio;
@@ -14,6 +15,7 @@ class UserProfile {
     required this.id,
     required this.name,
     required this.email,
+    this.username,
     this.profileImageUrl,
     this.phoneNumber,
     this.bio,
@@ -29,6 +31,7 @@ class UserProfile {
       id: doc.id,
       name: data['name'] ?? '',
       email: data['email'] ?? '',
+      username: data['username'],
       profileImageUrl: data['profileImageUrl'],
       phoneNumber: data['phoneNumber'],
       bio: data['bio'],
@@ -42,6 +45,7 @@ class UserProfile {
     return {
       'name': name,
       'email': email,
+      'username': username,
       'profileImageUrl': profileImageUrl,
       'phoneNumber': phoneNumber,
       'bio': bio,
@@ -55,6 +59,7 @@ class UserProfile {
     String? id,
     String? name,
     String? email,
+    String? username,
     String? profileImageUrl,
     String? phoneNumber,
     String? bio,
@@ -65,6 +70,7 @@ class UserProfile {
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
+      username: username ?? this.username,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       bio: bio ?? this.bio,
