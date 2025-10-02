@@ -10,14 +10,55 @@ class ThemeSwitcher extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return PopupMenuButton<ThemeMode>(
-          icon: Icon(
-            themeProvider.themeModeIcon,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
           tooltip: 'Change Theme',
+          offset: const Offset(0, 10),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           onSelected: (ThemeMode mode) {
             themeProvider.setThemeMode(mode);
           },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.15),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  themeProvider.themeModeIcon,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  size: 20,
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.arrow_drop_down_rounded,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
           itemBuilder: (BuildContext context) => [
             PopupMenuItem<ThemeMode>(
               value: ThemeMode.light,
