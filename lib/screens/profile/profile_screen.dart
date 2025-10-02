@@ -179,6 +179,20 @@ class ProfileScreen extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
 
+          const SizedBox(height: 4),
+
+          // Username
+          if (profile?.username != null && profile!.username!.isNotEmpty)
+            Text(
+              '@${profile.username}',
+              style: GoogleFonts.lato(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white.withOpacity(0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+
           const SizedBox(height: 8),
 
           // Email
@@ -253,6 +267,17 @@ class ProfileScreen extends StatelessWidget {
           ),
 
           const SizedBox(height: 16),
+
+          // Username
+          if (profile?.username != null && profile!.username!.isNotEmpty) ...[
+            _buildInfoRow(
+              context,
+              Icons.alternate_email,
+              'Username',
+              '@${profile.username}',
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Bio
           if (profile?.bio != null && profile!.bio!.isNotEmpty) ...[
