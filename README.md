@@ -64,7 +64,7 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/money-tracker-app.git
+   git clone https://github.com/matthias22m/money-tracker-app.git
    cd money-tracker-app
    ```
 
@@ -204,7 +204,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👥 Authors
 
 - **Matthias** - *Initial work* - [matthias22m](https://github.com/matthias22m)
-- **Nahom** - *Initial work* - [nahom-d54](https://github.com/nahom-d54)
+- **Nahom** - *Latter work* - [nahom-d54](https://github.com/nahom-d54)
 
 ## 🙏 Acknowledgments
 
@@ -217,7 +217,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you have any questions or need help, please:
 
-- 📧 **Email**: your.email@example.com
+- 📧 **Email**: info@penni.pro.et
 - 🐛 **Report Issues**: [GitHub Issues](https://github.com/matthias22m/money-tracker-app/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/matthias22m/money-tracker-app/discussions)
 
