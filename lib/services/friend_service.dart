@@ -111,6 +111,51 @@ class FriendService {
         .snapshots();
   }
 
+  /// Stream pending sent requests for current user
+  Stream<QuerySnapshot<Map<String, dynamic>>> sentPendingRequests() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      return const Stream.empty();
+    }
+
+    return _firestore
+        .collection('friendRequests')
+        .where('senderId', isEqualTo: uid)
+        .where('status', isEqualTo: 'pending')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  /// Get count of incoming pending requests
+  Stream<int> incomingRequestsCount() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      return Stream.value(0);
+    }
+
+    return _firestore
+        .collection('friendRequests')
+        .where('receiverId', isEqualTo: uid)
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get count of sent pending requests
+  Stream<int> sentRequestsCount() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      return Stream.value(0);
+    }
+
+    return _firestore
+        .collection('friendRequests')
+        .where('senderId', isEqualTo: uid)
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
   /// Accept a request and add friend to both users' friends lists
   Future<void> acceptRequest(String requestId) async {
     final currentUserId = await _currentUserId();

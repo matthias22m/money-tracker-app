@@ -47,15 +47,52 @@ class _FriendsScreenState extends State<FriendsScreen> {
             },
             tooltip: 'Add Friends',
           ),
-          IconButton(
-            icon: const Icon(Icons.inbox),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => RequestsInboxScreen()),
+          StreamBuilder<int>(
+            stream: _friendService.incomingRequestsCount(),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.inbox),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RequestsInboxScreen(),
+                        ),
+                      );
+                    },
+                    tooltip: 'Friend Requests',
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          count > 99 ? '99+' : count.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               );
             },
-            tooltip: 'Friend Requests',
           ),
         ],
       ),
@@ -104,7 +141,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
           return _buildEmptyState();
         }
 
-        final data = snapshot.data!.data() as Map<String, dynamic>?;
+        final data = snapshot.data!.data();
         final friends = data?['friends'] as List<dynamic>? ?? [];
         final friendIds = friends.map((e) => e.toString()).toList();
 
