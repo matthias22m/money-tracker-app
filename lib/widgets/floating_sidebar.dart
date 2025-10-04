@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/firebase_service.dart';
 import '../core/theme/theme_provider.dart';
+import '../utils/error_messages.dart';
 import 'theme_switcher.dart';
 
 class FloatingSidebar extends StatelessWidget {
@@ -514,29 +515,7 @@ class FloatingSidebar extends StatelessWidget {
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.error, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Failed to sign out: $e',
-                      style: GoogleFonts.lato(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              margin: const EdgeInsets.all(16),
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          ErrorMessages.showErrorSnackBar(context, e);
         }
       }
     }

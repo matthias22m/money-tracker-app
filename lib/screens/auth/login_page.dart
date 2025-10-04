@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/firebase_service.dart';
+import '../../utils/error_messages.dart';
 import 'forgot_password_screen.dart';
 
 class LoginPage extends StatefulWidget {
@@ -29,9 +30,7 @@ class _LoginPageState extends State<LoginPage> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
+      ErrorMessages.showErrorSnackBar(context, 'Please fill in all fields');
       return;
     }
 
@@ -49,24 +48,7 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       debugPrint('Login failed: $e');
       if (mounted) {
-        String errorMessage = 'Failed to sign in';
-
-        // Provide more specific error messages
-        if (e.toString().contains('user-not-found')) {
-          errorMessage = 'No account found with this email';
-        } else if (e.toString().contains('wrong-password')) {
-          errorMessage = 'Incorrect password';
-        } else if (e.toString().contains('invalid-email')) {
-          errorMessage = 'Please enter a valid email address';
-        } else if (e.toString().contains('user-disabled')) {
-          errorMessage = 'This account has been disabled';
-        } else {
-          errorMessage = 'Failed to sign in: ${e.toString()}';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
-        );
+        ErrorMessages.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {

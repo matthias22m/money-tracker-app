@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/firebase_service.dart';
 import '../../services/friend_service.dart';
 import '../../models/user_profile.dart';
+import '../../utils/error_messages.dart';
 
 class AddFriendsScreen extends StatefulWidget {
   const AddFriendsScreen({super.key});
@@ -70,26 +71,7 @@ class _AddFriendsScreenState extends State<AddFriendsScreen> {
       });
     } catch (e) {
       if (mounted) {
-        String errorMessage = 'Search failed';
-        if (e.toString().contains('unavailable')) {
-          errorMessage =
-              'Network unavailable. Please check your connection and try again.';
-        } else if (e.toString().contains('timeout') ||
-            e.toString().contains('deadline-exceeded')) {
-          errorMessage = 'Search timed out. Please try again.';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.orange,
-            action: SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: _search,
-            ),
-          ),
-        );
+        ErrorMessages.showErrorSnackBar(context, e);
       }
     } finally {
       setState(() {
@@ -110,19 +92,11 @@ class _AddFriendsScreenState extends State<AddFriendsScreen> {
       setState(() => _sending = false);
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message),
-          backgroundColor: result.success ? Colors.green : Colors.red,
-          action: !result.success && result.message.contains('try again')
-              ? SnackBarAction(
-                  label: 'Retry',
-                  textColor: Colors.white,
-                  onPressed: _sendRequest,
-                )
-              : null,
-        ),
-      );
+      if (result.success) {
+        ErrorMessages.showSuccessSnackBar(context, result.message);
+      } else {
+        ErrorMessages.showErrorSnackBar(context, result.message);
+      }
 
       // Clear the search if successful
       if (result.success) {
@@ -135,12 +109,7 @@ class _AddFriendsScreenState extends State<AddFriendsScreen> {
     } catch (e) {
       setState(() => _sending = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Unexpected error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ErrorMessages.showErrorSnackBar(context, e);
       }
       debugPrint('Error in _sendRequest: $e');
     }

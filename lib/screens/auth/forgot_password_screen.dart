@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/firebase_service.dart';
+import '../../utils/error_messages.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -23,16 +24,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final email = _emailController.text.trim();
 
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email address')),
+      ErrorMessages.showErrorSnackBar(
+        context,
+        'Please enter your email address',
       );
       return;
     }
 
     // Basic email validation
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid email address')),
+      ErrorMessages.showErrorSnackBar(
+        context,
+        'Please enter a valid email address',
       );
       return;
     }
@@ -75,22 +78,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       }
     } catch (e) {
       if (mounted) {
-        String errorMessage = 'Failed to send reset email';
-
-        // Provide more specific error messages
-        if (e.toString().contains('user-not-found')) {
-          errorMessage = 'No account found with this email address';
-        } else if (e.toString().contains('invalid-email')) {
-          errorMessage = 'Please enter a valid email address';
-        } else if (e.toString().contains('too-many-requests')) {
-          errorMessage = 'Too many requests. Please try again later';
-        } else {
-          errorMessage = 'Failed to send reset email: ${e.toString()}';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
-        );
+        ErrorMessages.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {

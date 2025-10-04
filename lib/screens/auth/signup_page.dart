@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/firebase_service.dart';
+import '../../utils/error_messages.dart';
 
 class SignupPage extends StatefulWidget {
   final VoidCallback showLoginPage;
@@ -28,15 +29,14 @@ class _SignupPageState extends State<SignupPage> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
+      ErrorMessages.showErrorSnackBar(context, 'Please fill in all fields');
       return;
     }
 
     if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 6 characters')),
+      ErrorMessages.showErrorSnackBar(
+        context,
+        'Password must be at least 6 characters',
       );
       return;
     }
@@ -55,11 +55,9 @@ class _SignupPageState extends State<SignupPage> {
       debugPrint('Signup successful!');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
-          ),
+        ErrorMessages.showSuccessSnackBar(
+          context,
+          'Account created successfully!',
         );
 
         // Go to main app directly
@@ -68,22 +66,7 @@ class _SignupPageState extends State<SignupPage> {
     } catch (e) {
       debugPrint('Signup failed: $e');
       if (mounted) {
-        String errorMessage = 'Failed to sign up';
-
-        // Provide more specific error messages
-        if (e.toString().contains('email-already-in-use')) {
-          errorMessage = 'An account with this email already exists';
-        } else if (e.toString().contains('weak-password')) {
-          errorMessage = 'Password is too weak';
-        } else if (e.toString().contains('invalid-email')) {
-          errorMessage = 'Please enter a valid email address';
-        } else {
-          errorMessage = 'Failed to sign up: ${e.toString()}';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
-        );
+        ErrorMessages.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {
