@@ -29,6 +29,87 @@ class FirebaseService {
   FirebaseAuth get auth => _auth;
   FirebaseFirestore get firestore => _firestore;
 
+  // Credential caching methods
+  Future<void> cacheCredentials({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      await _secureStorage.write(key: 'cached_email', value: email);
+      await _secureStorage.write(key: 'cached_password', value: password);
+      debugPrint('Credentials cached successfully');
+    } catch (e) {
+      debugPrint('Error caching credentials: $e');
+    }
+  }
+
+  Future<String?> getCachedEmail() async {
+    try {
+      return await _secureStorage.read(key: 'cached_email');
+    } catch (e) {
+      debugPrint('Error getting cached email: $e');
+      return null;
+    }
+  }
+
+  Future<String?> getCachedPassword() async {
+    try {
+      return await _secureStorage.read(key: 'cached_password');
+    } catch (e) {
+      debugPrint('Error getting cached password: $e');
+      return null;
+    }
+  }
+
+  Future<void> clearCachedCredentials() async {
+    try {
+      await _secureStorage.delete(key: 'cached_email');
+      await _secureStorage.delete(key: 'cached_password');
+      debugPrint('Cached credentials cleared');
+    } catch (e) {
+      debugPrint('Error clearing cached credentials: $e');
+    }
+  }
+
+  // Email suggestions methods
+  Future<void> saveEmailSuggestion(String email) async {
+    try {
+      final existingSuggestions = await getEmailSuggestions();
+      if (!existingSuggestions.contains(email)) {
+        existingSuggestions.add(email);
+        // Keep only the last 10 email suggestions
+        if (existingSuggestions.length > 10) {
+          existingSuggestions.removeAt(0);
+        }
+        await _secureStorage.write(
+          key: 'email_suggestions',
+          value: existingSuggestions.join(','),
+        );
+        debugPrint('Email suggestion saved: $email');
+      }
+    } catch (e) {
+      debugPrint('Error saving email suggestion: $e');
+    }
+  }
+
+  Future<List<String>> getEmailSuggestions() async {
+    try {
+      final suggestionsString = await _secureStorage.read(
+        key: 'email_suggestions',
+      );
+      if (suggestionsString != null && suggestionsString.isNotEmpty) {
+        return suggestionsString
+            .split(',')
+            .where((email) => email.isNotEmpty)
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting email suggestions: $e');
+      return [];
+    }
+  }
+
   // Authentication methods
   Future<void> signUp({
     required String email,

@@ -127,28 +127,28 @@ class _RequestsInboxScreenState extends State<RequestsInboxScreen>
 
   Widget _buildIncomingRequests() {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _friendService.incomingPendingRequests(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) {
+        stream: _friendService.incomingPendingRequests(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
           return _buildEmptyState(
             icon: Icons.inbox_outlined,
             title: 'No Incoming Requests',
             subtitle: 'You don\'t have any pending friend requests',
           );
-        }
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemBuilder: (context, i) {
-            final d = docs[i];
-            final data = d.data();
-            final senderId = data['senderId'] as String;
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemBuilder: (context, i) {
+              final d = docs[i];
+              final data = d.data();
+              final senderId = data['senderId'] as String;
 
             return _buildIncomingRequestCard(context, d.id, senderId, data);
           },
@@ -185,11 +185,11 @@ class _RequestsInboxScreenState extends State<RequestsInboxScreen>
             final receiverId = data['receiverId'] as String;
 
             return _buildSentRequestCard(context, d.id, receiverId, data);
-          },
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemCount: docs.length,
-        );
-      },
+            },
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemCount: docs.length,
+          );
+        },
     );
   }
 

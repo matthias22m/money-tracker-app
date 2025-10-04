@@ -16,12 +16,43 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _rememberMe = false;
+  List<String> _emailSuggestions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCachedCredentials();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCachedCredentials() async {
+    try {
+      final firebaseService = Provider.of<FirebaseService>(
+        context,
+        listen: false,
+      );
+      final cachedEmail = await firebaseService.getCachedEmail();
+      final cachedPassword = await firebaseService.getCachedPassword();
+      final emailSuggestions = await firebaseService.getEmailSuggestions();
+
+      setState(() {
+        if (cachedEmail != null && cachedPassword != null) {
+          _emailController.text = cachedEmail;
+          _passwordController.text = cachedPassword;
+          _rememberMe = true;
+        }
+        _emailSuggestions = emailSuggestions;
+      });
+    } catch (e) {
+      debugPrint('Error loading cached credentials: $e');
+    }
   }
 
   Future<void> _signIn() async {
@@ -44,6 +75,20 @@ class _LoginPageState extends State<LoginPage> {
         listen: false,
       );
       await firebaseService.signInWithEmail(email: email, password: password);
+
+      // Cache credentials if remember me is checked
+      if (_rememberMe) {
+        await firebaseService.cacheCredentials(
+          email: email,
+          password: password,
+        );
+      } else {
+        await firebaseService.clearCachedCredentials();
+      }
+
+      // Save email to suggestions
+      await firebaseService.saveEmailSuggestion(email);
+
       debugPrint('Login successful!');
     } catch (e) {
       debugPrint('Login failed: $e');
@@ -85,12 +130,83 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 40),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email),
-                ),
+              Autocomplete<String>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text.isEmpty) {
+                    return const Iterable<String>.empty();
+                  }
+                  return _emailSuggestions.where((String option) {
+                    return option.toLowerCase().contains(
+                      textEditingValue.text.toLowerCase(),
+                    );
+                  });
+                },
+                onSelected: (String selection) {
+                  _emailController.text = selection;
+                },
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                      _emailController.addListener(() {
+                        // Update the autocomplete controller when our controller changes
+                        if (controller.text != _emailController.text) {
+                          controller.text = _emailController.text;
+                        }
+                      });
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        onChanged: (value) {
+                          _emailController.text = value;
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                      );
+                    },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4.0,
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (context, index) {
+                            final option = options.elementAt(index);
+                            return InkWell(
+                              onTap: () => onSelected(option),
+                              child: Container(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.email,
+                                      size: 20,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        option,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 20),
               TextField(
@@ -101,7 +217,22 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 obscureText: true,
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
+              // Remember Me checkbox
+              Row(
+                children: [
+                  Checkbox(
+                    value: _rememberMe,
+                    onChanged: (value) {
+                      setState(() {
+                        _rememberMe = value ?? false;
+                      });
+                    },
+                  ),
+                  const Text('Remember Me'),
+                ],
+              ),
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 height: 50,
