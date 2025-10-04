@@ -10,12 +10,14 @@ class FloatingSidebar extends StatelessWidget {
   final VoidCallback onClose;
   final VoidCallback onProfileTap;
   final VoidCallback onSettingsTap;
+  final VoidCallback onFriendsTap;
 
   const FloatingSidebar({
     super.key,
     required this.onClose,
     required this.onProfileTap,
     required this.onSettingsTap,
+    required this.onFriendsTap,
   });
 
   @override
@@ -130,6 +132,12 @@ class FloatingSidebar extends StatelessWidget {
                   icon: Icons.person_outline,
                   title: 'Profile',
                   onTap: onProfileTap,
+                ),
+                _buildSidebarItem(
+                  context: context,
+                  icon: Icons.people_outline,
+                  title: 'Friends',
+                  onTap: onFriendsTap,
                 ),
                 _buildSidebarItem(
                   context: context,

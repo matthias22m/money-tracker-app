@@ -20,6 +20,7 @@ import 'screens/main_app/history_screen.dart';
 import 'screens/main_app/add_expense_screen.dart';
 import 'screens/main_app/budget_screen.dart';
 import 'screens/main_app/summary_screen.dart';
+import 'screens/main_app/friends_screen.dart';
 
 // Sidebar and new screens
 import 'screens/profile/profile_screen.dart';
@@ -210,6 +211,14 @@ class _MainAppScreenState extends State<MainAppScreen> {
     );
   }
 
+  void _navigateToFriends() {
+    _closeSidebar();
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const FriendsScreen()),
+    );
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -237,7 +246,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
                 builder: (context, profileSnapshot) {
                   final profile = profileSnapshot.data;
                   final user = firebaseService.auth.currentUser;
-                  
+
                   return Container(
                     margin: const EdgeInsets.all(8),
                     child: GestureDetector(
@@ -259,14 +268,16 @@ class _MainAppScreenState extends State<MainAppScreen> {
                         child: profile?.hasProfileImage == true
                             ? null
                             : Text(
-                                profile?.initials ?? 
+                                profile?.initials ??
                                     (user?.displayName?.isNotEmpty == true
                                         ? user!.displayName![0].toUpperCase()
                                         : user?.email?.isNotEmpty == true
-                                            ? user!.email![0].toUpperCase()
-                                            : 'U'),
+                                        ? user!.email![0].toUpperCase()
+                                        : 'U'),
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onPrimary,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                 ),
@@ -327,6 +338,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
                 onClose: _closeSidebar,
                 onProfileTap: _navigateToProfile,
                 onSettingsTap: _navigateToSettings,
+                onFriendsTap: _navigateToFriends,
               ),
             ),
           ),
