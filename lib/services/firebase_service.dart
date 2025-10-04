@@ -62,9 +62,62 @@ class FirebaseService {
                 'username': suggested,
                 'updatedAt': FieldValue.serverTimestamp(),
               }, SetOptions(merge: true));
+          debugPrint('✅ Username auto-assigned: $suggested');
+        } else {
+          // Fallback: try with a generic base if email-based generation failed
+          debugPrint(
+            '⚠️ Failed to generate username with email base, trying generic...',
+          );
+          final fallbackSuggested = await _userService
+              .generateAvailableUsername(
+                base: 'user',
+                reserve: true,
+                forUserId: user.uid,
+              );
+          if (fallbackSuggested != null) {
+            await _firestore
+                .collection('users')
+                .doc(user.uid)
+                .collection('profile')
+                .doc('info')
+                .set({
+                  'username': fallbackSuggested,
+                  'updatedAt': FieldValue.serverTimestamp(),
+                }, SetOptions(merge: true));
+            debugPrint('✅ Fallback username assigned: $fallbackSuggested');
+          } else {
+            debugPrint(
+              '❌ Failed to generate any username for user: ${user.uid}',
+            );
+          }
         }
       } catch (e) {
-        debugPrint('⚠️ Failed to auto-assign username: $e');
+        debugPrint('❌ Failed to auto-assign username: $e');
+        // Try one more time with a completely random username
+        try {
+          final emergencyUsername = await _userService
+              .generateAvailableUsername(
+                base: null, // No base, completely random
+                reserve: true,
+                forUserId: user.uid,
+              );
+          if (emergencyUsername != null) {
+            await _firestore
+                .collection('users')
+                .doc(user.uid)
+                .collection('profile')
+                .doc('info')
+                .set({
+                  'username': emergencyUsername,
+                  'updatedAt': FieldValue.serverTimestamp(),
+                }, SetOptions(merge: true));
+            debugPrint('✅ Emergency username assigned: $emergencyUsername');
+          }
+        } catch (emergencyError) {
+          debugPrint(
+            '❌ Emergency username generation also failed: $emergencyError',
+          );
+        }
       }
     }
   }
@@ -666,6 +719,61 @@ class FirebaseService {
     return await _retryOperation(
       () => _userService.getUserIdByUsername(username),
     );
+  }
+
+  /// Ensure current user has a username, generate one if missing
+  Future<String?> ensureUserHasUsername() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      // Check if user already has a username
+      final profileDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('profile')
+          .doc('info')
+          .get();
+
+      if (profileDoc.exists) {
+        final data = profileDoc.data();
+        final existingUsername = data?['username'] as String?;
+        if (existingUsername != null && existingUsername.isNotEmpty) {
+          debugPrint('✅ User already has username: $existingUsername');
+          return existingUsername;
+        }
+      }
+
+      // Generate a new username
+      debugPrint('🔄 User missing username, generating one...');
+      final email = user.email ?? '';
+      final inferredName = email.split('@').first;
+
+      final suggested = await _userService.generateAvailableUsername(
+        base: inferredName.isNotEmpty ? inferredName : 'user',
+        reserve: true,
+        forUserId: user.uid,
+      );
+
+      if (suggested != null) {
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('profile')
+            .doc('info')
+            .set({
+              'username': suggested,
+              'updatedAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+        debugPrint('✅ Username assigned to existing user: $suggested');
+        return suggested;
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error ensuring user has username: $e');
+      return null;
+    }
   }
 
   /// Set username for current user
