@@ -30,7 +30,11 @@ class FirebaseService {
   FirebaseFirestore get firestore => _firestore;
 
   // Authentication methods
-  Future<void> signUp({required String email, required String password}) async {
+  Future<void> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {
     final cred = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -42,13 +46,14 @@ class FirebaseService {
     // Create default profile
     final user = cred.user;
     if (user != null) {
-      final inferredName = email.split('@').first;
-      await createDefaultProfile(user.uid, email, inferredName);
+      await createDefaultProfile(user.uid, email, fullName);
 
       // Auto-generate and reserve username
       try {
+        // Use first name from full name for username generation
+        final firstName = fullName.split(' ').first.toLowerCase();
         final suggested = await _userService.generateAvailableUsername(
-          base: inferredName,
+          base: firstName,
           reserve: true,
           forUserId: user.uid,
         );

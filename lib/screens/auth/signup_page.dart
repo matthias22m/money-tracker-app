@@ -12,12 +12,14 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
+    _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -25,11 +27,20 @@ class _SignupPageState extends State<SignupPage> {
 
   Future<void> _signUp() async {
     // Input validation
+    final fullName = _fullNameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (fullName.isEmpty || email.isEmpty || password.isEmpty) {
       ErrorMessages.showErrorSnackBar(context, 'Please fill in all fields');
+      return;
+    }
+
+    if (fullName.length < 2) {
+      ErrorMessages.showErrorSnackBar(
+        context,
+        'Please enter your full name (at least 2 characters)',
+      );
       return;
     }
 
@@ -46,12 +57,16 @@ class _SignupPageState extends State<SignupPage> {
     });
 
     try {
-      debugPrint('Attempting signup with email: $email');
+      debugPrint('Attempting signup with email: $email and name: $fullName');
       final firebaseService = Provider.of<FirebaseService>(
         context,
         listen: false,
       );
-      await firebaseService.signUp(email: email, password: password);
+      await firebaseService.signUp(
+        email: email,
+        password: password,
+        fullName: fullName,
+      );
       debugPrint('Signup successful!');
 
       if (mounted) {
@@ -103,6 +118,16 @@ class _SignupPageState extends State<SignupPage> {
                 ),
               ),
               const SizedBox(height: 40),
+              TextField(
+                controller: _fullNameController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Full Name',
+                  prefixIcon: Icon(Icons.person),
+                  hintText: 'Enter your full name',
+                ),
+              ),
+              const SizedBox(height: 20),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
