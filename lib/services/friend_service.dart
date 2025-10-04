@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'app_notification_service.dart';
 
 class FriendRequestResult {
   final bool success;
@@ -13,6 +14,7 @@ class FriendRequestResult {
 class FriendService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AppNotificationService _notificationService = AppNotificationService();
 
   Future<String?> _currentUserId() async {
     return _auth.currentUser?.uid;
@@ -74,6 +76,23 @@ class FriendService {
         'status': 'pending',
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      // Get sender's name for notification
+      final senderProfile = await _firestore
+          .collection('users')
+          .doc(senderId)
+          .collection('profile')
+          .doc('info')
+          .get();
+
+      final senderName = senderProfile.data()?['name'] ?? 'Someone';
+
+      // Create notification for receiver
+      await _notificationService.createFriendRequestNotification(
+        receiverId: receiverId,
+        senderName: senderName,
+        senderId: senderId,
+      );
 
       debugPrint('Friend request sent successfully');
       return FriendRequestResult(
@@ -204,6 +223,22 @@ class FriendService {
       }, SetOptions(merge: true));
       debugPrint('Receiver added to sender\'s friends list successfully');
 
+      // Get accepter's name for notification
+      final accepterProfile = await _firestore
+          .collection('users')
+          .doc(receiverId)
+          .collection('profile')
+          .doc('info')
+          .get();
+
+      final accepterName = accepterProfile.data()?['name'] ?? 'Someone';
+
+      // Create notification for sender
+      await _notificationService.createFriendRequestAcceptedNotification(
+        senderId: senderId,
+        accepterName: accepterName,
+      );
+
       // Finally, delete the original request
       debugPrint('Deleting original request...');
       await docRef.delete();
@@ -220,7 +255,39 @@ class FriendService {
 
   /// Decline removes the friend request document
   Future<void> declineRequest(String requestId) async {
-    await _firestore.collection('friendRequests').doc(requestId).delete();
+    try {
+      // Get request details before deleting
+      final docRef = _firestore.collection('friendRequests').doc(requestId);
+      final snap = await docRef.get();
+
+      if (snap.exists) {
+        final data = snap.data() as Map<String, dynamic>;
+        final senderId = data['senderId'] as String;
+        final receiverId = data['receiverId'] as String;
+
+        // Get decliner's name for notification
+        final declinerProfile = await _firestore
+            .collection('users')
+            .doc(receiverId)
+            .collection('profile')
+            .doc('info')
+            .get();
+
+        final declinerName = declinerProfile.data()?['name'] ?? 'Someone';
+
+        // Create notification for sender
+        await _notificationService.createFriendRequestDeclinedNotification(
+          senderId: senderId,
+          declinerName: declinerName,
+        );
+      }
+
+      // Delete the request
+      await docRef.delete();
+    } catch (e) {
+      debugPrint('Error declining friend request: $e');
+      rethrow;
+    }
   }
 
   /// Utility: query userIds who are already friends with current user
