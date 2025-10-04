@@ -21,6 +21,7 @@ import 'screens/main_app/add_expense_screen.dart';
 import 'screens/main_app/budget_screen.dart';
 import 'screens/main_app/summary_screen.dart';
 import 'screens/main_app/friends_screen.dart';
+import 'screens/main_app/notifications_screen.dart';
 
 // Sidebar and new screens
 import 'screens/profile/profile_screen.dart';
@@ -219,6 +220,14 @@ class _MainAppScreenState extends State<MainAppScreen> {
     );
   }
 
+  void _navigateToNotifications() {
+    _closeSidebar();
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+    );
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -339,6 +348,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
                 onProfileTap: _navigateToProfile,
                 onSettingsTap: _navigateToSettings,
                 onFriendsTap: _navigateToFriends,
+                onNotificationsTap: _navigateToNotifications,
               ),
             ),
           ),

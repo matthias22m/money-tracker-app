@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../services/firebase_service.dart';
+import '../services/app_notification_service.dart';
 import '../core/theme/theme_provider.dart';
 import '../utils/error_messages.dart';
 import 'theme_switcher.dart';
@@ -12,6 +13,7 @@ class FloatingSidebar extends StatelessWidget {
   final VoidCallback onProfileTap;
   final VoidCallback onSettingsTap;
   final VoidCallback onFriendsTap;
+  final VoidCallback onNotificationsTap;
 
   const FloatingSidebar({
     super.key,
@@ -19,6 +21,7 @@ class FloatingSidebar extends StatelessWidget {
     required this.onProfileTap,
     required this.onSettingsTap,
     required this.onFriendsTap,
+    required this.onNotificationsTap,
   });
 
   @override
@@ -140,6 +143,7 @@ class FloatingSidebar extends StatelessWidget {
                   title: 'Friends',
                   onTap: onFriendsTap,
                 ),
+                _buildNotificationsItem(context),
                 _buildSidebarItem(
                   context: context,
                   icon: Icons.settings_outlined,
@@ -342,6 +346,116 @@ class FloatingSidebar extends StatelessWidget {
                     title,
                     style: GoogleFonts.lato(
                       fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.4),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationsItem(BuildContext context) {
+    final notificationService = AppNotificationService();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onNotificationsTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.08),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Icon(
+                        Icons.notifications_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 22,
+                      ),
+                      StreamBuilder<int>(
+                        stream: notificationService.getUnreadCount(),
+                        builder: (context, snapshot) {
+                          final count = snapshot.data ?? 0;
+                          if (count > 0) {
+                            return Positioned(
+                              right: -2,
+                              top: -2,
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Text(
+                                  count > 99 ? '99+' : count.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Notifications',
+                    style: GoogleFonts.lato(
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                       letterSpacing: 0.2,
