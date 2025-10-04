@@ -133,7 +133,7 @@ class UserService {
       return null;
     } catch (e) {
       debugPrint('Error getting user ID by username: $e');
-      return null;
+      rethrow; // Let FirebaseService handle retry
     }
   }
 

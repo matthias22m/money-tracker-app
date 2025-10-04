@@ -661,9 +661,11 @@ class FirebaseService {
     return await _userService.isUsernameAvailable(username);
   }
 
-  /// Get user ID by username
+  /// Get user ID by username with retry logic
   Future<String?> getUserIdByUsername(String username) async {
-    return await _userService.getUserIdByUsername(username);
+    return await _retryOperation(
+      () => _userService.getUserIdByUsername(username),
+    );
   }
 
   /// Set username for current user
@@ -765,5 +767,38 @@ class FirebaseService {
   /// Get username validation error message
   String? getUsernameValidationError(String username) {
     return _userService.getUsernameValidationError(username);
+  }
+
+  /// Retry operation with exponential backoff for transient errors
+  Future<T?> _retryOperation<T>(
+    Future<T?> Function() operation, {
+    int maxRetries = 3,
+  }) async {
+    int attempt = 0;
+    while (attempt < maxRetries) {
+      try {
+        return await operation();
+      } catch (e) {
+        attempt++;
+        final isRetryableError =
+            e.toString().contains('unavailable') ||
+            e.toString().contains('deadline-exceeded') ||
+            e.toString().contains('internal') ||
+            e.toString().contains('timeout');
+
+        if (attempt >= maxRetries || !isRetryableError) {
+          debugPrint('❌ Operation failed after $attempt attempts: $e');
+          rethrow;
+        }
+
+        // Exponential backoff: 500ms, 1s, 2s
+        final delayMs = 500 * (1 << (attempt - 1));
+        debugPrint(
+          '⚠️ Retrying operation in ${delayMs}ms (attempt $attempt/$maxRetries)',
+        );
+        await Future.delayed(Duration(milliseconds: delayMs));
+      }
+    }
+    return null;
   }
 }
