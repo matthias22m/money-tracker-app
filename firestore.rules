@@ -8,7 +8,16 @@ service cloud.firestore {
       
       // Profile subcollection
       match /profile/{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        // Allow read for all authenticated users (needed for friend requests and search)
+        allow read: if request.auth != null;
+        
+        // Allow write for own profile
+        allow write: if request.auth != null && request.auth.uid == userId;
+        
+        // Allow updating friends array for friend acceptance (cross-user updates)
+        // This allows users to add themselves to others' friends lists
+        allow update: if request.auth != null 
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friends']);
       }
       
       // Transactions subcollection
@@ -46,6 +55,33 @@ service cloud.firestore {
       // 2. The userId in the document matches the authenticated user
       allow delete: if request.auth != null 
         && resource.data.userId == request.auth.uid;
+    }
+    
+    // Friend requests collection
+    match /friendRequests/{requestId} {
+      // Allow read if user is sender or receiver
+      allow read: if request.auth != null 
+        && (resource.data.senderId == request.auth.uid 
+            || resource.data.receiverId == request.auth.uid);
+      
+      // Allow list queries - we need to be permissive for pairKey queries
+      // The application logic ensures users only query for their own requests
+      allow list: if request.auth != null;
+      
+      // Allow create if user is the sender and status is pending or accepted
+      allow create: if request.auth != null 
+        && request.resource.data.senderId == request.auth.uid
+        && (request.resource.data.status == 'pending' 
+            || request.resource.data.status == 'accepted');
+      
+      // Allow update if user is the receiver (for accepting/declining)
+      allow update: if request.auth != null 
+        && resource.data.receiverId == request.auth.uid;
+      
+      // Allow delete if user is sender or receiver
+      allow delete: if request.auth != null 
+        && (resource.data.senderId == request.auth.uid 
+            || resource.data.receiverId == request.auth.uid);
     }
   }
 }
