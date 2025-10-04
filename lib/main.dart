@@ -99,6 +99,11 @@ class MyApp extends StatelessWidget {
                 builder: (context) => const BudgetScreen(),
               );
             }
+            if (settings.name == '/friends') {
+              return MaterialPageRoute(
+                builder: (context) => const FriendsScreen(),
+              );
+            }
             return null;
           },
           home: const AuthWrapper(),

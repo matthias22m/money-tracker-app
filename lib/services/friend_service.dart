@@ -88,11 +88,18 @@ class FriendService {
       final senderName = senderProfile.data()?['name'] ?? 'Someone';
 
       // Create notification for receiver
-      await _notificationService.createFriendRequestNotification(
-        receiverId: receiverId,
-        senderName: senderName,
-        senderId: senderId,
-      );
+      debugPrint('Creating notification for receiver: $receiverId');
+      debugPrint('Sender name: $senderName');
+      try {
+        await _notificationService.createFriendRequestNotification(
+          receiverId: receiverId,
+          senderName: senderName,
+          senderId: senderId,
+        );
+        debugPrint('Notification created successfully');
+      } catch (e) {
+        debugPrint('Error creating notification: $e');
+      }
 
       debugPrint('Friend request sent successfully');
       return FriendRequestResult(

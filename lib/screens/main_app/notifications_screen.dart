@@ -261,8 +261,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           ),
                         ),
                         const Spacer(),
-                        if (notification.type == NotificationType.friendRequest)
-                          _buildActionButtons(notification),
                       ],
                     ),
                   ],
@@ -272,41 +270,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildActionButtons(AppNotification notification) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.close, color: Colors.red, size: 18),
-          onPressed: () => _handleDeclineFriendRequest(notification),
-          tooltip: 'Decline',
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.red.withOpacity(0.1),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
-            padding: const EdgeInsets.all(4),
-            minimumSize: const Size(24, 24),
-          ),
-        ),
-        const SizedBox(width: 4),
-        IconButton(
-          icon: const Icon(Icons.check, color: Colors.green, size: 18),
-          onPressed: () => _handleAcceptFriendRequest(notification),
-          tooltip: 'Accept',
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.green.withOpacity(0.1),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
-            padding: const EdgeInsets.all(4),
-            minimumSize: const Size(24, 24),
-          ),
-        ),
-      ],
     );
   }
 
@@ -346,36 +309,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationType.system:
         // No specific action
         break;
-    }
-  }
-
-  void _handleAcceptFriendRequest(AppNotification notification) async {
-    // This would need to be implemented with the friend service
-    // For now, just mark as read
-    await _notificationService.markAsRead(notification.id);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Friend request accepted!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-
-  void _handleDeclineFriendRequest(AppNotification notification) async {
-    // This would need to be implemented with the friend service
-    // For now, just mark as read
-    await _notificationService.markAsRead(notification.id);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Friend request declined'),
-          backgroundColor: Colors.orange,
-        ),
-      );
     }
   }
 }

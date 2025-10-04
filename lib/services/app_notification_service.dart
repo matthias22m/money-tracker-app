@@ -89,8 +89,14 @@ class AppNotificationService {
     String? relatedUserId,
     String? relatedData,
   }) async {
+    debugPrint('AppNotificationService: Creating notification');
+    debugPrint('User ID: $userId');
+    debugPrint('Type: ${type.name}');
+    debugPrint('Title: $title');
+    debugPrint('Message: $message');
+
     try {
-      await _firestore.collection('notifications').add({
+      final docRef = await _firestore.collection('notifications').add({
         'userId': userId,
         'type': type.name,
         'title': title,
@@ -100,8 +106,12 @@ class AppNotificationService {
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
+      debugPrint(
+        'AppNotificationService: Notification created with ID: ${docRef.id}',
+      );
     } catch (e) {
-      debugPrint('Error creating notification: $e');
+      debugPrint('AppNotificationService: Error creating notification: $e');
+      rethrow;
     }
   }
 
@@ -111,13 +121,28 @@ class AppNotificationService {
     required String senderName,
     required String senderId,
   }) async {
-    await createNotification(
-      userId: receiverId,
-      type: NotificationType.friendRequest,
-      title: 'New Friend Request',
-      message: '$senderName sent you a friend request',
-      relatedUserId: senderId,
-    );
+    debugPrint('AppNotificationService: Creating friend request notification');
+    debugPrint('Receiver ID: $receiverId');
+    debugPrint('Sender Name: $senderName');
+    debugPrint('Sender ID: $senderId');
+
+    try {
+      await createNotification(
+        userId: receiverId,
+        type: NotificationType.friendRequest,
+        title: 'New Friend Request',
+        message: '$senderName sent you a friend request',
+        relatedUserId: senderId,
+      );
+      debugPrint(
+        'AppNotificationService: Friend request notification created successfully',
+      );
+    } catch (e) {
+      debugPrint(
+        'AppNotificationService: Error creating friend request notification: $e',
+      );
+      rethrow;
+    }
   }
 
   /// Create friend request accepted notification
@@ -209,4 +234,3 @@ class AppNotificationService {
     }
   }
 }
-
