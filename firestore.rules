@@ -95,5 +95,45 @@ service cloud.firestore {
       // Allow list queries for authenticated users (application logic ensures users only query their own)
       allow list: if request.auth != null;
     }
+
+    // Shared expenses ledger
+    match /artifacts/{appId}/sharedExpenses/{expenseId} {
+      function isAuthed() { return request.auth != null; }
+      function uid() { return request.auth.uid; }
+      function isInvolved() { return isAuthed() && (resource.data.lenderId == uid() || resource.data.borrowerId == uid()); }
+      function isCreateValid() {
+        return isAuthed()
+          && request.resource.data.keys().hasOnly(['lenderId','borrowerId','amount','description','status','createdAt','lenderUsername','borrowerUsername'])
+          && request.resource.data.lenderId == uid()
+          && request.resource.data.status == 'pending_approval'
+          && request.resource.data.amount is number
+          && request.resource.data.borrowerId is string
+          && request.resource.data.description is string;
+      }
+      function changedOnly(keys) {
+        return request.resource.data.diff(resource.data).changedKeys().hasOnly(keys);
+      }
+      function isAccept() {
+        return isAuthed()
+          && resource.data.status == 'pending_approval'
+          && request.resource.data.status == 'active'
+          && resource.data.borrowerId == uid();
+      }
+      // Settlement workflow removed
+
+      // Read: only lender or borrower
+      allow get, list: if isInvolved();
+
+      // Create: lender creates with pending_approval
+      allow create: if isCreateValid();
+
+      // Update: allow only controlled status transitions and limited field changes
+      allow update: if isInvolved() && (
+          (isAccept() && changedOnly(['status']))
+        );
+
+      // Delete: allow either party to reject while pending_approval
+      allow delete: if isInvolved() && resource.data.status == 'pending_approval';
+    }
   }
 }
