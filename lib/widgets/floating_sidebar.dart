@@ -305,20 +305,23 @@ class FloatingSidebar extends StatelessWidget {
 
           // Footer with sign out and app version
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            padding: const EdgeInsets.fromLTRB(0, 16, 0, 20),
             child: Column(
               children: [
                 _buildSignOutItem(context),
                 const SizedBox(height: 16),
-                Text(
-                  'Penni v1.0',
-                  style: GoogleFonts.lato(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withOpacity(0.5),
-                    letterSpacing: 0.3,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Text(
+                    'Penni v1.0',
+                    style: GoogleFonts.lato(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.5),
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
               ],

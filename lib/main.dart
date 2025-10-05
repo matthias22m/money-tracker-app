@@ -8,7 +8,6 @@ import 'firebase_options.dart';
 // Imports from Milestone 2 and new auth screen
 import 'services/firebase_service.dart';
 import 'screens/auth/auth_screen.dart';
-import 'models/user_profile.dart';
 
 // Theme imports
 import 'core/theme/app_theme.dart';
@@ -30,6 +29,7 @@ import 'widgets/floating_sidebar.dart';
 
 // Notification service
 import 'services/notification_service.dart';
+import 'services/app_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -253,51 +253,56 @@ class _MainAppScreenState extends State<MainAppScreen> {
         ),
         centerTitle: true,
         actions: [
-          Consumer<FirebaseService>(
-            builder: (context, firebaseService, child) {
-              return StreamBuilder<UserProfile?>(
-                stream: firebaseService.getProfileStream(),
-                builder: (context, profileSnapshot) {
-                  final profile = profileSnapshot.data;
-                  final user = firebaseService.auth.currentUser;
-
-                  return Container(
-                    margin: const EdgeInsets.all(8),
-                    child: GestureDetector(
-                      onTap: () {
-                        // Navigate to profile screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ProfileScreen(),
-                          ),
-                        );
-                      },
-                      child: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        backgroundImage: profile?.hasProfileImage == true
-                            ? NetworkImage(profile!.profileImageUrl!)
-                            : null,
-                        child: profile?.hasProfileImage == true
-                            ? null
-                            : Text(
-                                profile?.initials ??
-                                    (user?.displayName?.isNotEmpty == true
-                                        ? user!.displayName![0].toUpperCase()
-                                        : user?.email?.isNotEmpty == true
-                                        ? user!.email![0].toUpperCase()
-                                        : 'U'),
-                                style: TextStyle(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+          // Notifications bell with unread count badge
+          Builder(
+            builder: (context) {
+              final appNotificationService = AppNotificationService();
+              return StreamBuilder<int>(
+                stream: appNotificationService.getUnreadCount(),
+                builder: (context, snapshot) {
+                  final unread = snapshot.data ?? 0;
+                  return IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationsScreen(),
+                        ),
+                      );
+                    },
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.notifications_none_rounded),
+                        if (unread > 0)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  unread > 99 ? '99+' : '$unread',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                      ),
+                            ),
+                          ),
+                      ],
                     ),
+                    tooltip: 'Notifications',
                   );
                 },
               );

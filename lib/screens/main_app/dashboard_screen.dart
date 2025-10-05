@@ -87,8 +87,6 @@ class DashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(firebaseService, context),
-                  const SizedBox(height: 30),
                   _buildTotalSpentCard(totalExpenses, context),
                   const SizedBox(height: 30),
                   _buildSpendingByCategory(
@@ -110,54 +108,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // Header Widget: "Hello, Sarah!" and Add button
-  Widget _buildHeader(FirebaseService firebaseService, BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hello! 👋',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Track your expenses wisely',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-          ],
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
-            onPressed: () {
-              // You can add notifications functionality here
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Notifications coming soon!',
-                    style: GoogleFonts.lato(),
-                  ),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+  // (Header removed per requirement)
 
   // Total Spent Card Widget
   Widget _buildTotalSpentCard(double totalExpenses, BuildContext context) {
