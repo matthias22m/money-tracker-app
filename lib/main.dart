@@ -21,6 +21,8 @@ import 'screens/main_app/budget_screen.dart';
 import 'screens/main_app/summary_screen.dart';
 import 'screens/main_app/friends_screen.dart';
 import 'screens/main_app/notifications_screen.dart';
+import 'screens/main_app/log_shared_expense_screen.dart';
+import 'screens/main_app/debts_screen.dart';
 
 // Sidebar and new screens
 import 'screens/profile/profile_screen.dart';
@@ -92,6 +94,16 @@ class MyApp extends StatelessWidget {
                   transactionToEdit: args?['transaction'],
                   isEditing: args?['isEditing'] ?? false,
                 ),
+              );
+            }
+            if (settings.name == '/log-shared-expense') {
+              return MaterialPageRoute(
+                builder: (context) => const LogSharedExpenseScreen(),
+              );
+            }
+            if (settings.name == '/debts') {
+              return MaterialPageRoute(
+                builder: (context) => const DebtsScreen(),
               );
             }
             if (settings.name == '/budget') {
@@ -170,6 +182,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
     'Add Transaction',
     'History',
     'Summary',
+    'Loans',
   ];
 
   @override
@@ -330,6 +343,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
               ),
               const HistoryScreen(),
               const SummaryScreen(),
+              const DebtsScreen(),
             ],
           ),
 
@@ -381,6 +395,10 @@ class _MainAppScreenState extends State<MainAppScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics_rounded),
             label: 'Summary',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet_rounded),
+            label: 'Loans',
           ),
         ],
         currentIndex: _selectedIndex,
