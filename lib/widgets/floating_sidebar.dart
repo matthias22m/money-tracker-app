@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/firebase_service.dart';
 import '../services/app_notification_service.dart';
 import '../core/theme/theme_provider.dart';
 import '../utils/error_messages.dart';
-import 'theme_switcher.dart';
+import './theme_switcher.dart';
 
 class FloatingSidebar extends StatelessWidget {
   final VoidCallback onClose;
@@ -51,25 +52,185 @@ class FloatingSidebar extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header with logo and close button
+          // Header with profile and close button
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
+            padding: const EdgeInsets.fromLTRB(20, 24, 16, 24),
             child: Column(
               children: [
-                // Logo and close button row
+                // Profile and close button row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // App Logo
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        'assets/images/launcher_icon.png',
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
+                    // Profile Section
+                    Expanded(
+                      child: Row(
+                        children: [
+                          // Profile Picture
+                          Consumer<FirebaseService>(
+                            builder: (context, firebaseService, child) {
+                              final user = firebaseService.auth.currentUser;
+                              return StreamBuilder<
+                                DocumentSnapshot<Map<String, dynamic>>
+                              >(
+                                stream: user != null
+                                    ? firebaseService.firestore
+                                          .collection('users')
+                                          .doc(user.uid)
+                                          .collection('profile')
+                                          .doc('info')
+                                          .snapshots()
+                                    : null,
+                                builder: (context, snapshot) {
+                                  String? profileImageUrl;
+                                  String? initials;
+
+                                  if (snapshot.hasData &&
+                                      snapshot.data!.exists) {
+                                    final data = snapshot.data!.data();
+                                    profileImageUrl = data?['profileImageUrl'];
+                                    final name = data?['name'] ?? 'User';
+                                    initials = name.isNotEmpty
+                                        ? name
+                                              .split(' ')
+                                              .map(
+                                                (e) => e.isNotEmpty ? e[0] : '',
+                                              )
+                                              .take(2)
+                                              .join('')
+                                              .toUpperCase()
+                                        : 'U';
+                                  }
+
+                                  return CircleAvatar(
+                                    radius: 30,
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withOpacity(0.1),
+                                    backgroundImage:
+                                        profileImageUrl != null &&
+                                            profileImageUrl.isNotEmpty
+                                        ? NetworkImage(profileImageUrl)
+                                        : null,
+                                    child:
+                                        profileImageUrl == null ||
+                                            profileImageUrl.isEmpty
+                                        ? Text(
+                                            initials ?? 'U',
+                                            style: GoogleFonts.lato(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w700,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                            ),
+                                          )
+                                        : null,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 16),
+                          // User Info
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Consumer<FirebaseService>(
+                                  builder: (context, firebaseService, child) {
+                                    final user =
+                                        firebaseService.auth.currentUser;
+                                    return StreamBuilder<
+                                      DocumentSnapshot<Map<String, dynamic>>
+                                    >(
+                                      stream: user != null
+                                          ? firebaseService.firestore
+                                                .collection('users')
+                                                .doc(user.uid)
+                                                .collection('profile')
+                                                .doc('info')
+                                                .snapshots()
+                                          : null,
+                                      builder: (context, snapshot) {
+                                        if (snapshot.hasData &&
+                                            snapshot.data!.exists) {
+                                          final data = snapshot.data!.data();
+                                          final name = data?['name'] ?? 'User';
+                                          final email = user?.email ?? '';
+
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                name,
+                                                style: GoogleFonts.lato(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.onSurface,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                email,
+                                                style: GoogleFonts.lato(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withOpacity(0.6),
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          );
+                                        }
+
+                                        // Loading or fallback state
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Loading...',
+                                              style: GoogleFonts.lato(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w700,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurface,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              user?.email ?? '',
+                                              style: GoogleFonts.lato(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w400,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withOpacity(0.6),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(width: 12),
                     Container(
                       decoration: BoxDecoration(
                         color: Theme.of(
@@ -94,19 +255,6 @@ class FloatingSidebar extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 16),
-                // Menu title
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Menu',
-                    style: GoogleFonts.lato(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -150,128 +298,18 @@ class FloatingSidebar extends StatelessWidget {
                   title: 'Settings',
                   onTap: onSettingsTap,
                 ),
-                const SizedBox(height: 12),
-                // Theme Switcher
-                _buildThemeSwitcher(context),
-                const SizedBox(height: 16),
-                Container(
-                  height: 1,
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.1),
-                        Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.05),
-                        Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.1),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildSignOutItem(context),
+                _buildThemeChangeItem(context),
               ],
             ),
           ),
 
-          // Footer with theme info
+          // Footer with sign out and app version
           Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
             child: Column(
               children: [
-                Container(
-                  height: 1,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.1),
-                        Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.05),
-                        Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.1),
-                      ],
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.15),
-                      width: 1,
-                    ),
-                  ),
-                  child: Consumer<ThemeProvider>(
-                    builder: (context, themeProvider, child) {
-                      return Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primary.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              themeProvider.themeModeIcon,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 14,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Current Theme',
-                                  style: GoogleFonts.lato(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withOpacity(0.6),
-                                  ),
-                                ),
-                                Text(
-                                  themeProvider.themeModeString,
-                                  style: GoogleFonts.lato(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
+                _buildSignOutItem(context),
+                const SizedBox(height: 16),
                 Text(
                   'Penni v1.0',
                   style: GoogleFonts.lato(
@@ -298,16 +336,16 @@ class FloatingSidebar extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: Theme.of(
                   context,
@@ -317,35 +355,19 @@ class FloatingSidebar extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    icon,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 22,
-                  ),
+                Icon(
+                  icon,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                  size: 22,
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     title,
                     style: GoogleFonts.lato(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                       letterSpacing: 0.2,
@@ -371,16 +393,16 @@ class FloatingSidebar extends StatelessWidget {
     final notificationService = AppNotificationService();
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onNotificationsTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: Theme.of(
                   context,
@@ -390,65 +412,49 @@ class FloatingSidebar extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      Icon(
-                        Icons.notifications_outlined,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 22,
-                      ),
-                      StreamBuilder<int>(
-                        stream: notificationService.getUnreadCount(),
-                        builder: (context, snapshot) {
-                          final count = snapshot.data ?? 0;
-                          if (count > 0) {
-                            return Positioned(
-                              right: -2,
-                              top: -2,
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 16,
-                                  minHeight: 16,
-                                ),
-                                child: Text(
-                                  count > 99 ? '99+' : count.toString(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
+                Stack(
+                  children: [
+                    Icon(
+                      Icons.notifications_outlined,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.7),
+                      size: 22,
+                    ),
+                    StreamBuilder<int>(
+                      stream: notificationService.getUnreadCount(),
+                      builder: (context, snapshot) {
+                        final count = snapshot.data ?? 0;
+                        if (count > 0) {
+                          return Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ],
-                  ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                count > 99 ? '99+' : count.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -479,16 +485,16 @@ class FloatingSidebar extends StatelessWidget {
 
   Widget _buildSignOutItem(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _showSignOutDialog(context),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: Theme.of(context).colorScheme.error.withOpacity(0.2),
                 width: 1,
@@ -496,37 +502,21 @@ class FloatingSidebar extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.error.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.error.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.logout_rounded,
-                    color: Theme.of(context).colorScheme.error,
-                    size: 22,
-                  ),
+                Icon(
+                  Icons.logout_rounded,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
+                  size: 22,
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     'Sign Out',
                     style: GoogleFonts.lato(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.error,
+                      color: Theme.of(context).colorScheme.onSurface,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -635,61 +625,43 @@ class FloatingSidebar extends StatelessWidget {
     }
   }
 
-  Widget _buildThemeSwitcher(BuildContext context) {
+  Widget _buildThemeChangeItem(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
-              width: 1,
+      margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.palette_outlined,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              size: 22,
             ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.secondary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.secondary.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.palette_outlined,
-                  color: Theme.of(context).colorScheme.secondary,
-                  size: 22,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                'Theme',
+                style: GoogleFonts.lato(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  letterSpacing: 0.2,
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  'Theme',
-                  style: GoogleFonts.lato(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const ThemeSwitcher(),
-            ],
-          ),
+            ),
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+                return const ThemeSwitcher();
+              },
+            ),
+          ],
         ),
       ),
     );
