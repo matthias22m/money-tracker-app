@@ -18,6 +18,7 @@ class SharedExpenseService {
     required String description,
     required String lenderUsername,
     required String borrowerUsername,
+    required DateTime createdAt,
   }) async {
     final lenderId = await _uid();
     if (lenderId == null) throw Exception('User not authenticated');
@@ -29,7 +30,7 @@ class SharedExpenseService {
       'description': description,
       // Approval flow: initial state requires borrower acceptance
       'status': 'pending_approval',
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': Timestamp.fromDate(createdAt),
       'lenderUsername': lenderUsername,
       'borrowerUsername': borrowerUsername,
     });
@@ -71,6 +72,19 @@ class SharedExpenseService {
     if (uid == null) return const Stream.empty();
     return _collection(appId)
         .where('borrowerId', isEqualTo: uid)
+        .where('status', isEqualTo: 'pending_approval')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  // Requests I created and are waiting for the other user to approve
+  Stream<QuerySnapshot<Map<String, dynamic>>> pendingMyRequests({
+    required String appId,
+  }) {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return const Stream.empty();
+    return _collection(appId)
+        .where('lenderId', isEqualTo: uid)
         .where('status', isEqualTo: 'pending_approval')
         .orderBy('createdAt', descending: true)
         .snapshots();

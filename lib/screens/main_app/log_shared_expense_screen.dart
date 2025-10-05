@@ -17,6 +17,7 @@ class _LogSharedExpenseScreenState extends State<LogSharedExpenseScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  DateTime _selectedDate = DateTime.now();
 
   String? _selectedBorrowerId;
   String? _selectedBorrowerUsername;
@@ -79,6 +80,7 @@ class _LogSharedExpenseScreenState extends State<LogSharedExpenseScreen> {
         description: _descriptionController.text,
         lenderUsername: _currentUserUsername ?? 'You',
         borrowerUsername: _selectedBorrowerUsername ?? 'Friend',
+        createdAt: _selectedDate,
       );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -134,6 +136,38 @@ class _LogSharedExpenseScreenState extends State<LogSharedExpenseScreen> {
                     },
                     validator: (val) =>
                         val == null ? 'Please select a friend' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedDate = picked;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Date',
+                        border: OutlineInputBorder(),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                            style: GoogleFonts.lato(),
+                          ),
+                          const Icon(Icons.calendar_today, size: 18),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
