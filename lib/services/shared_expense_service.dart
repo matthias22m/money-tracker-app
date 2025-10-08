@@ -90,6 +90,31 @@ class SharedExpenseService {
         .snapshots();
   }
 
+  // Active for current user in both roles (two streams to be combined at UI)
+  Stream<QuerySnapshot<Map<String, dynamic>>> activeAsLender({
+    required String appId,
+  }) {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return const Stream.empty();
+    return _collection(appId)
+        .where('lenderId', isEqualTo: uid)
+        .where('status', isEqualTo: 'active')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> activeAsBorrower({
+    required String appId,
+  }) {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return const Stream.empty();
+    return _collection(appId)
+        .where('borrowerId', isEqualTo: uid)
+        .where('status', isEqualTo: 'active')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
   // Pending settlements that I need to confirm (initiated by the other party)
   Future<void> acceptDebt({required String appId, required String expenseId}) {
     return _collection(appId).doc(expenseId).update({'status': 'active'});
